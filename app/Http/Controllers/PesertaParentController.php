@@ -134,12 +134,11 @@ class PesertaParentController extends Controller
             return view('peserta_parent.lte_spp_fee', compact(['title']));
         } elseif (auth()->user()->status == 'parents') {
             // cari kode anak pada tabel private_childs_parents
-            var_dump('echo');
             $getChilds = PrivateChildsParents::select(['childs_code'])->where('parents_code', '=', auth()->user()->code)->get();
             if (json_decode($getChilds) != NULL) {
                 $data = $getChilds;
             } else {
-                return $this->_redirectFailed('/persyaratan', 'Riwayat Persyaratan Tidak Ditemukan');
+                return $this->_redirectFailed('/spp_peserta', 'Riwayat SPP Tidak Ditemukan');
             }
             return view('peserta_parent.lte_spp_fee', compact(['title', 'data']));
         } else {
