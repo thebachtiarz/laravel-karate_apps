@@ -154,3 +154,4 @@ Route::group(['middleware' => ['preventBackHistory', 'auth', 'checkRole:bestnimd
     // ajax request
     Route::post('/profile/checkmypassword', 'UserController@checkMyPasswdLegelity');
 });
+// testing commit
