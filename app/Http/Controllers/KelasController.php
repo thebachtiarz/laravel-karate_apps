@@ -99,7 +99,7 @@ class KelasController extends Controller
                             return ['message' => $check_peserta];
                         }
                     } else {
-                        $peserta = DB::table('peserta_data')->where('kode_kelas_peserta', '=', $kelas)->get();
+                        $peserta = Data_Peserta::where('kode_kelas_peserta', '=', $kelas)->orderBy('nama_peserta', 'asc')->get();
                         return view('body.kelas.lte_kelas_record_latihan', compact(['title', 'kelas', 'peserta']));
                     }
                 }
@@ -136,7 +136,7 @@ class KelasController extends Controller
                             return ['message' => $check_peserta];
                         }
                     } else {
-                        $peserta = DB::table('peserta_data')->where('kode_kelas_peserta', '=', $kelas)->get();
+                        $peserta = Data_Peserta::where('kode_kelas_peserta', '=', $kelas)->orderBy('nama_peserta', 'asc')->get();
                         return view('body.kelas.lte_kelas_record_persyaratan', compact(['title', 'kelas', 'peserta']));
                     }
                 }
@@ -292,7 +292,7 @@ class KelasController extends Controller
         ]);
 
         if ($validate->fails()) {
-            return redirect()->back()->with('failed', 'Terdapat Kesalahan Dalam Proses GAGAL');
+            return redirect()->back()->with('failed', 'Terdapat Kesalahan Dalam Proses');
         } else {
             if (get_lastSaldoUser_by_code($data->class_code, $data->kode_peserta) > 0) {
                 $refundsAll = Record_Budget::create([
@@ -332,5 +332,30 @@ class KelasController extends Controller
             $thsmt = '';
         }
         return $thsmt;
+    }
+
+    # AJAX REQUEST
+    public function getDetailPesertaLatihanByDateAndKelas(Request $data)
+    {
+        $validate = Validator::make($data->all(), [
+            'datetime' => 'required|date',
+            'kode_kelas' => 'required|alpha_num'
+        ]);
+
+        if ($validate->fails()) {
+            return ['false', 'Opps... Terdapat Kesalahan Dalam Proses'];
+        } else {
+            $data = Record_Latihan::select(['kode_peserta'])->where([['kode_kelas_peserta', '=', $data->kode_kelas], ['created_at', '=', $data->datetime]])->get();
+            if (json_decode($data) != NULL) {
+                $data->toJson();
+                foreach ($data as $key) {
+                    $peserta[] = getNamePstByCode($key->kode_peserta);
+                }
+                sort($peserta);
+                return ['true', $peserta];
+            } else {
+                return ['false', 'Peserta Tidak Ditemukan'];
+            }
+        }
     }
 }

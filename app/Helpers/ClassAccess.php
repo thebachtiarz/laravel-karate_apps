@@ -6,6 +6,24 @@ use App\Kelas;
 use App\Acc_class;
 use App\Data_Peserta;
 
+# create helper for auth access
+// function setAccessStatus($arrStatus, $aggr = '')
+// {
+//     if (is_array($arrStatus)) {
+//         $status = '';
+//         for ($i = 0; $i < count($arrStatus); $i++) {
+//             if ($i == 0) {
+//                 // $status .= parse_str("(" . auth()->user()->status == $arrStatus[$i] . ")");
+//             } else {
+//                 // $status .= parse_str(" $aggr (" . auth()->user()->status == $arrStatus[$i] . ")");
+//             }
+//         }
+//         return $status;
+//     } else {
+//         return 'No You Dont!';
+//     }
+// }
+
 # cek apakah user dapat membuat kelas baru (moderate)
 function checkStatusModerate()
 {
@@ -133,6 +151,19 @@ function getThnSmtClassByCode($class_code = '')
         return 'No You Dont!';
     }
 }
+# cek tahun semester kelas berdasarkan kode kelas
+function getThnSmtClassByCodeArray($class_code_array = '')
+{
+    if ($class_code_array) {
+        for ($i = 0; $i < count($class_code_array); $i++) {
+            $data = Kelas::select(['thsmt'])->where('kode_kelas', '=', $class_code_array[$i])->first();
+            $thsmt[] = $data['thsmt'];
+        }
+        return $thsmt;
+    } else {
+        return 'No You Dont!';
+    }
+}
 
 # cek biaya spp kelas by kode kelas
 function getSppFeeClassByCode($class_code = '')
@@ -141,6 +172,6 @@ function getSppFeeClassByCode($class_code = '')
         $data = Kelas::select(['spp'])->where('kode_kelas', '=', $class_code)->first();
         return $data['spp'];
     } else {
-        return 'No You Dont!';
+        return NULL;
     }
 }

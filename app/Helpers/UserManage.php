@@ -1,12 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use App\User;
 use App\Kelas;
 use App\Acc_class;
 use App\Data_Peserta;
 use App\Static_Budget;
 use App\Static_File;
+use App\Record_Latihan;
+use App\Record_Budget;
+use App\Record_File;
+use App\Record_Spp;
 use App\PrivateChildsParents;
 use App\Guest_Otentifikasi as GO;
 
@@ -288,7 +294,23 @@ function getInfoParentsPesertaByCode($kode_peserta = '')
         # code...
     }
 }
-
+# get kode_peserta anak by kode wali
+function getPstCodeByWaliCode($kode_wali = '')
+{
+    if ($kode_wali) {
+        $getChilds = PrivateChildsParents::select(['childs_code'])->where('parents_code', '=', $kode_wali)->get();
+        if (json_decode($getChilds) != NULL) {
+            foreach ($getChilds as $key) {
+                $childsCode[] = $key->childs_code;
+            }
+            return $childsCode;
+        } else {
+            # code...
+        }
+    } else {
+        # code...
+    }
+}
 # get info anak orang tua by code
 function getInfoAnakWaliByCode($kode_wali = '')
 {
@@ -310,3 +332,308 @@ function getInfoAnakWaliByCode($kode_wali = '')
         # code...
     }
 }
+
+# create own profile timeline
+function myProfileTimeline($code = '', $find_as = '')
+{ // moderator, treasurer, instructor, participants, parents
+    if ($code && $find_as) {
+        # account status parents or api request
+        if ($find_as == 'pelatih') {
+            $getRecLatihan = Record_Latihan::select(['thsmt', 'kode_kelas_peserta', 'kode_peserta', 'kode_pelatih', 'keterangan', 'durasi', 'created_at'])->where('kode_pelatih', '=', $code)->groupBy('created_at')->get();
+            (json_decode($getRecLatihan) != NULL) ? $recLatihan = $getRecLatihan->toArray() : $recLatihan = [];
+            for ($i = 0; $i < count($recLatihan); $i++) {
+                $recLatihan[$i] += ['type' => 'latihan']; // add type of data
+            }
+            $getRecBudget = Record_Budget::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'])->where('kode_pj', '=', $code)->get();
+            if (json_decode($getRecBudget) != NULL) {
+                $recBudget = $getRecBudget->toArray();
+                for ($i = 0; $i < count($recBudget); $i++) {
+                    $recBudget[$i] += ['type' => 'biaya']; // add type of data
+                    array_push($recLatihan, $recBudget[$i]); // push array data $recBudget
+                }
+            }
+
+            $getRecFile = Record_File::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'kode_file', 'file_info', 'created_at'])->where('kode_pj', '=', $code)->get();
+            if (json_decode($getRecFile) != NULL) {
+                $recFile = $getRecFile->toArray();
+                for ($i = 0; $i < count($recFile); $i++) {
+                    $recFile[$i] += ['type' => 'file']; // add type of data
+                    array_push($recLatihan, $recFile[$i]); // push array data $recFile
+                }
+            }
+
+            $getRecSpp = Record_Spp::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kredit', 'untuk_bulan', 'kode_pj', 'created_at'])->where('kode_pj', '=', $code)->get();
+            if (json_decode($getRecSpp) != NULL) {
+                $recSpp = $getRecSpp->toArray();
+                for ($i = 0; $i < count($recSpp); $i++) {
+                    $recSpp[$i] += ['type' => 'spp']; // add type of data
+                    array_push($recLatihan, $recSpp[$i]); // push array data $recSpp
+                }
+            }
+
+            function date_compare($txa1, $txa2)
+            {
+                $datetime1 = strtotime($txa1['created_at']);
+                $datetime2 = strtotime($txa2['created_at']);
+                return $datetime2 - $datetime1;
+            }
+
+            // Sort the array  
+            usort($recLatihan, 'date_compare');
+            // dd(json_encode($recLatihan));
+            return createTimelineData($recLatihan);
+        } elseif ($find_as == 'peserta') {
+            # if $find_as is peserta, then $code must be array
+            $getRecLatihan = Record_Latihan::select(['thsmt', 'kode_kelas_peserta', 'kode_peserta', 'kode_pelatih', 'keterangan', 'durasi', 'created_at'])->whereIn('thsmt', getThnSmtClassByCodeArray(getClassCodeByPstCodeArray($code)))->whereIn('kode_peserta', $code)->groupBy('created_at')->get();
+            (json_decode($getRecLatihan) != NULL) ? $recLatihan = $getRecLatihan->toArray() : $recLatihan = [];
+            for ($i = 0; $i < count($recLatihan); $i++) {
+                $recLatihan[$i] += ['type' => 'latihan']; // add type of data
+            }
+            $getRecBudget = Record_Budget::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'])->whereIn('thsmt', getThnSmtClassByCodeArray(getClassCodeByPstCodeArray($code)))->whereIn('kode_peserta', $code)->get();
+            if (json_decode($getRecBudget) != NULL) {
+                $recBudget = $getRecBudget->toArray();
+                for ($i = 0; $i < count($recBudget); $i++) {
+                    $recBudget[$i] += ['type' => 'biaya']; // add type of data
+                    array_push($recLatihan, $recBudget[$i]); // push array data $recBudget
+                }
+            }
+
+            $getRecFile = Record_File::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'kode_file', 'file_info', 'created_at'])->whereIn('thsmt', getThnSmtClassByCodeArray(getClassCodeByPstCodeArray($code)))->whereIn('kode_peserta', $code)->get();
+            if (json_decode($getRecFile) != NULL) {
+                $recFile = $getRecFile->toArray();
+                for ($i = 0; $i < count($recFile); $i++) {
+                    $recFile[$i] += ['type' => 'file']; // add type of data
+                    array_push($recLatihan, $recFile[$i]); // push array data $recFile
+                }
+            }
+
+            $getRecSpp = Record_Spp::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kredit', 'untuk_bulan', 'kode_pj', 'created_at'])->whereIn('thsmt', getThnSmtClassByCodeArray(getClassCodeByPstCodeArray($code)))->whereIn('kode_peserta', $code)->get();
+            if (json_decode($getRecSpp) != NULL) {
+                $recSpp = $getRecSpp->toArray();
+                for ($i = 0; $i < count($recSpp); $i++) {
+                    $recSpp[$i] += ['type' => 'spp']; // add type of data
+                    array_push($recLatihan, $recSpp[$i]); // push array data $recSpp
+                }
+            }
+
+            function date_compare($txb1, $txb2)
+            {
+                $datetime1 = strtotime($txb1['created_at']);
+                $datetime2 = strtotime($txb2['created_at']);
+                return $datetime2 - $datetime1;
+            }
+
+            // Sort the array  
+            usort($recLatihan, 'date_compare');
+            // dd(json_encode($recLatihan));
+            return createTimelineData($recLatihan);
+        } else {
+            # code...
+        }
+    } else {
+        if ((auth()->user()->status == 'moderator') || (auth()->user()->status == 'treasurer') || (auth()->user()->status == 'instructor')) {
+            $getRecLatihan = Record_Latihan::select(['thsmt', 'kode_kelas_peserta', 'kode_peserta', 'kode_pelatih', 'keterangan', 'durasi', 'created_at'])->where('kode_pelatih', '=', auth()->user()->code)->groupBy('created_at')->get();
+            (json_decode($getRecLatihan) != NULL) ? $recLatihan = $getRecLatihan->toArray() : $recLatihan = [];
+            for ($i = 0; $i < count($recLatihan); $i++) {
+                $recLatihan[$i] += ['type' => 'latihan']; // add type of data
+            }
+            if ((auth()->user()->status == 'moderator') || (auth()->user()->status == 'treasurer')) {
+                $getRecBudget = Record_Budget::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'])->where('kode_pj', '=', auth()->user()->code)->get();
+                if (json_decode($getRecBudget) != NULL) {
+                    $recBudget = $getRecBudget->toArray();
+                    for ($i = 0; $i < count($recBudget); $i++) {
+                        $recBudget[$i] += ['type' => 'biaya']; // add type of data
+                        array_push($recLatihan, $recBudget[$i]); // push array data $recBudget
+                    }
+                }
+
+                $getRecFile = Record_File::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'kode_file', 'file_info', 'created_at'])->where('kode_pj', '=', auth()->user()->code)->get();
+                if (json_decode($getRecFile) != NULL) {
+                    $recFile = $getRecFile->toArray();
+                    for ($i = 0; $i < count($recFile); $i++) {
+                        $recFile[$i] += ['type' => 'file']; // add type of data
+                        array_push($recLatihan, $recFile[$i]); // push array data $recFile
+                    }
+                }
+
+                $getRecSpp = Record_Spp::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kredit', 'untuk_bulan', 'kode_pj', 'created_at'])->where('kode_pj', '=', auth()->user()->code)->get();
+                if (json_decode($getRecSpp) != NULL) {
+                    $recSpp = $getRecSpp->toArray();
+                    for ($i = 0; $i < count($recSpp); $i++) {
+                        $recSpp[$i] += ['type' => 'spp']; // add type of data
+                        array_push($recLatihan, $recSpp[$i]); // push array data $recSpp
+                    }
+                }
+            }
+            // Comparision function 
+            function date_compare($ty1, $element2)
+            {
+                $datetime1 = strtotime($ty1['created_at']);
+                $datetime2 = strtotime($element2['created_at']);
+                return $datetime2 - $datetime1;
+            }
+
+            // Sort the array  
+            usort($recLatihan, 'date_compare');
+            // dd($recLatihan);
+            return createTimelineData($recLatihan);
+        } elseif (auth()->user()->status == 'participants') {
+            $getRecLatihan = Record_Latihan::select(['thsmt', 'kode_kelas_peserta', 'kode_peserta', 'kode_pelatih', 'keterangan', 'durasi', 'created_at'])->where('kode_peserta', '=', auth()->user()->code)->groupBy('created_at')->get();
+            (json_decode($getRecLatihan) != NULL) ? $recLatihan = $getRecLatihan->toArray() : $recLatihan = [];
+            for ($i = 0; $i < count($recLatihan); $i++) {
+                $recLatihan[$i] += ['type' => 'latihan']; // add type of data
+            }
+            $getRecBudget = Record_Budget::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'])->where('kode_peserta', '=', auth()->user()->code)->get();
+            if (json_decode($getRecBudget) != NULL) {
+                $recBudget = $getRecBudget->toArray();
+                for ($i = 0; $i < count($recBudget); $i++) {
+                    $recBudget[$i] += ['type' => 'biaya']; // add type of data
+                    array_push($recLatihan, $recBudget[$i]); // push array data $recBudget
+                }
+            }
+
+            $getRecFile = Record_File::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'kode_file', 'file_info', 'created_at'])->where('kode_peserta', '=', auth()->user()->code)->get();
+            if (json_decode($getRecFile) != NULL) {
+                $recFile = $getRecFile->toArray();
+                for ($i = 0; $i < count($recFile); $i++) {
+                    $recFile[$i] += ['type' => 'file']; // add type of data
+                    array_push($recLatihan, $recFile[$i]); // push array data $recFile
+                }
+            }
+
+            $getRecSpp = Record_Spp::select(['thsmt', 'kode_kelas', 'kode_peserta', 'kredit', 'untuk_bulan', 'kode_pj', 'created_at'])->where('kode_peserta', '=', auth()->user()->code)->get();
+            if (json_decode($getRecSpp) != NULL) {
+                $recSpp = $getRecSpp->toArray();
+                for ($i = 0; $i < count($recSpp); $i++) {
+                    $recSpp[$i] += ['type' => 'spp']; // add type of data
+                    array_push($recLatihan, $recSpp[$i]); // push array data $recSpp
+                }
+            }
+
+            function date_compare($tz1, $tz2)
+            {
+                $datetime1 = strtotime($tz1['created_at']);
+                $datetime2 = strtotime($tz2['created_at']);
+                return $datetime2 - $datetime1;
+            }
+
+            // Sort the array  
+            usort($recLatihan, 'date_compare');
+            // dd(json_encode($recLatihan));
+            return createTimelineData($recLatihan);
+        } else {
+            # code...
+        }
+    }
+}
+# random color
+function getRandColor()
+{
+    return Arr::random(['light-blue', 'aqua', 'green', 'yellow', 'red', 'navy', 'teal', 'purple', 'orange', 'maroon']);
+}
+# new date array timeline
+function newDateArrayTimeline($date)
+{
+    return '<li class="time-label"><span class="bg-' . getRandColor() . '">' . conv_getDate($date) . '</span></li>';
+}
+# crate body timeline by type
+function createBodyTimelineByType($data_body)
+{
+    if ($data_body['type'] == 'latihan') { //'thsmt', 'kode_kelas_peserta', 'kode_peserta', 'kode_pelatih', 'keterangan', 'durasi', 'created_at'
+        $makeID = Str::random(9);
+        return '
+        <li>
+            <i class="fa fa-running bg-' . getRandColor() . '"></i>
+            <div class="timeline-item">
+                <span class="time"><i class="fa fa-clock-o"></i> ' . conv_getTime($data_body['created_at']) . '</span>
+                <h3 class="timeline-header">' . getClassNameByCode($data_body['kode_kelas_peserta']) . '</h3>
+                <div class="timeline-body">
+                    <p><i class="fas fa-info-circle fa-sm"></i>&ensp;' . getKetLatihanByCode($data_body['keterangan']) . '</p>
+                    <p><i class="fas fa-user-secret fa-sm"></i>&ensp;' . getNamePltByCode($data_body['kode_pelatih']) . '&ensp;<span class="label label-primary">Pelatih</span></p>
+                    <p><i class="fas fa-clock-o fa-sm"></i>&ensp;' . $data_body['durasi'] . ' Jam</p>
+                </div>
+                <div class="timeline-footer" id="btntraindetail-' . $makeID . '">
+                    <button class="btn btn-primary btn-xs showDetailTrainButton" id="openbutton-' . $makeID . '" data-goto="' . $makeID . '" data-unhide="hidebutton-' . $makeID . '" data-datetime="' . $data_body['created_at'] . '" data-kelas="' . $data_body['kode_kelas_peserta'] . '">Lihat Detail Peserta</button>
+                    <button class="btn btn-warning btn-xs hideDetailTrainButton displayHidden" id="hidebutton-' . $makeID . '" data-goto="' . $makeID . '" data-unhide="openbutton-' . $makeID . '">Sembunyikan</button>
+                </div>
+                <div class="timeline-body displayHidden" id="' . $makeID . '"></div>
+            </div>
+        </li>';
+    } elseif ($data_body['type'] == 'biaya') { //'thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'
+        $userAuth = ((auth()->user()->status == 'moderator') || (auth()->user()->status == 'treasurer') || (auth()->user()->status == 'instructor')) ? '<i class="fas fa-user-tie fa-sm"></i>&ensp;' . getNamePstByCode($data_body['kode_peserta']) : '<i class="fas fa-user-secret fa-sm"></i>&ensp;' . getNamePltByCode($data_body['kode_pj']) . '&ensp;<span class="label label-primary">Pelatih</span>';
+        $userStat = (auth()->user()->status == 'parents') ? '<p><i class="fas fa-user-tie fa-sm"></i>&ensp;' . getNamePstByCode($data_body['kode_peserta']) . '&ensp;<span class="label label-success">Peserta</span></p>' : '';
+        $ketAggregate = ($data_body['aggregate'] == '+') ? '<i class="fa fa-plus fa-sm"></i>&ensp;' : '<i class="fa fa-minus fa-sm"></i>&ensp;';
+        return '
+        <li>
+            <i class="fa fa-file-invoice-dollar bg-' . getRandColor() . '"></i>
+            <div class="timeline-item">
+                <span class="time"><i class="fa fa-clock-o"></i> ' . conv_getTime($data_body['created_at']) . '</span>
+                <h3 class="timeline-header">' . getClassNameByCode($data_body['kode_kelas']) . '</h3>
+                <div class="timeline-body">
+                    <p><i class="fas fa-info-circle fa-sm"></i>&ensp;' . $data_body['keterangan'] . '</p>
+                    <p>' . $userAuth . '</p>' . $userStat . '
+                    <p>' . $ketAggregate . ' Rp. ' . mycurrency($data_body['kredit']) . '</p>
+                </div>
+            </div>
+        </li>';
+    } elseif ($data_body['type'] == 'file') { //'thsmt', 'kode_kelas', 'kode_peserta', 'kode_pj', 'kode_file', 'file_info', 'created_at'
+        $userAuth = ((auth()->user()->status == 'moderator') || (auth()->user()->status == 'treasurer') || (auth()->user()->status == 'instructor')) ? '<i class="fas fa-user-tie fa-sm"></i>&ensp;' . getNamePstByCode($data_body['kode_peserta']) : '<i class="fas fa-user-secret fa-sm"></i>&ensp;' . getNamePltByCode($data_body['kode_pj']) . '&ensp;<span class="label label-primary">Pelatih</span>';
+        $userStat = (auth()->user()->status == 'parents') ? '<p><i class="fas fa-user-tie fa-sm"></i>&ensp;' . getNamePstByCode($data_body['kode_peserta']) . '&ensp;<span class="label label-success">Peserta</span></p>' : '';
+        return '
+        <li>
+            <i class="fa fa-archive bg-' . getRandColor() . '"></i>
+            <div class="timeline-item">
+                <span class="time"><i class="fa fa-clock-o"></i> ' . conv_getTime($data_body['created_at']) . '</span>
+                <h3 class="timeline-header">' . getClassNameByCode($data_body['kode_kelas']) . '</h3>
+                <div class="timeline-body">
+                    <p><i class="fas fa-info-circle fa-sm"></i>&ensp;Pengumpulan Berkas Ujian</p>
+                    <p>' . $userAuth . '</p>' . $userStat . '
+                    <p><i class="fas fa-archive fa-sm"></i>&ensp;Jenis : ' . getFileInfoByCode($data_body['kode_file']) . '</p>
+                    <p><i class="fas fa-file-alt fa-sm"></i>&ensp;Keterangan : ' . $data_body['file_info'] . '</p>
+                </div>
+            </div>
+        </li>';
+    } elseif ($data_body['type'] == 'spp') { //'thsmt', 'kode_kelas', 'kode_peserta', 'kredit', 'untuk_bulan', 'kode_pj', 'created_at'
+        $userAuth = ((auth()->user()->status == 'moderator') || (auth()->user()->status == 'treasurer') || (auth()->user()->status == 'instructor')) ? '<i class="fas fa-user-tie fa-sm"></i>&ensp;' . getNamePstByCode($data_body['kode_peserta']) : '<i class="fas fa-user-secret fa-sm"></i>&ensp;' . getNamePltByCode($data_body['kode_pj']) . '&ensp;<span class="label label-primary">Pelatih</span>';
+        $userStat = (auth()->user()->status == 'parents') ? '<p><i class="fas fa-user-tie fa-sm"></i>&ensp;' . getNamePstByCode($data_body['kode_peserta']) . '&ensp;<span class="label label-success">Peserta</span></p>' : '';
+        return '
+        <li>
+            <i class="fa fa-dollar-sign bg-' . getRandColor() . '"></i>
+            <div class="timeline-item">
+                <span class="time"><i class="fa fa-clock-o"></i> ' . conv_getTime($data_body['created_at']) . '</span>
+                <h3 class="timeline-header">' . getClassNameByCode($data_body['kode_kelas']) . '</h3>
+                <div class="timeline-body">
+                    <p><i class="fas fa-info-circle fa-sm"></i>&ensp;Pembayaran SPP ' . makeSubstrFromThSmt($data_body['thsmt']) . ' - ' . getMonth($data_body['untuk_bulan']) . '</p>
+                    <p>' . $userAuth . '</p>' . $userStat . '
+                    <p><i class="fa fa-plus fa-sm"></i>&ensp; Rp. ' . mycurrency($data_body['kredit']) . '</p>
+                </div>
+            </div>
+        </li>';
+    } else {
+        # code...
+    }
+}
+# start create timeline with function
+function createTimelineData($recLatihan)
+{
+    $timelinemaster = '<ul class="timeline timeline-inverse">';
+    for ($i =  0; $i < (int) count($recLatihan); $i++) {
+        if ($i < 1) {
+            # array tanggal pertama
+            $timelinemaster .= newDateArrayTimeline($recLatihan[$i]['created_at']);
+            $timelinemaster .= createBodyTimelineByType($recLatihan[$i]);
+        } else {
+            if (conv_getDate($recLatihan[$i]['created_at']) == conv_getDate($recLatihan[$i - 1]['created_at'])) {
+                # masuk array dalam tanggal yang sama
+                $timelinemaster .= createBodyTimelineByType($recLatihan[$i]);
+            } else {
+                # buat array tanggal baru
+                $timelinemaster .= newDateArrayTimeline($recLatihan[$i]['created_at']);
+                $timelinemaster .= createBodyTimelineByType($recLatihan[$i]);
+            }
+        }
+    }
+    $timelinemaster .= '<li><i class="fa fa-clock-o bg-' . getRandColor() . '"></i> </li></ul>';
+    return $timelinemaster;
+}
+## end of create timeline with function

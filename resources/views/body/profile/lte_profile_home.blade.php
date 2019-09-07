@@ -1,6 +1,12 @@
 @extends('layouts.masterlte')
 
 @section('header')
+<style>
+    .displayHidden {
+        display: none;
+    }
+</style>
+<meta name="csrf-token" content="{{ csrf_token() }}" />
 @endsection
 
 @section('content')
@@ -115,13 +121,18 @@
                     <li class=""><a href="#activity" data-toggle="tab" aria-expanded="false">Activity</a></li>
                     <li class="active"><a href="#timeline" data-toggle="tab" aria-expanded="true">Timeline</a></li>
                     <li class=""><a href="#settings" data-toggle="tab" aria-expanded="false">Settings</a></li>
+                    <li class=""><a href="#mypassword" data-toggle="tab" aria-expanded="false">Ganti Password</a></li>
                 </ul>
                 <div class="tab-content">
                     <div class="tab-pane" id="activity">
-
+                        <!-- Riwayat Jam Mengajar -->
                     </div>
                     <div class="tab-pane active" id="timeline">
-
+                        @if(auth()->user()->status == 'parents')
+                        {!! myProfileTimeline(getPstCodeByWaliCode(auth()->user()->code), 'peserta') !!}
+                        @else
+                        {!! myProfileTimeline() !!}
+                        @endif
                     </div>
                     <div class="tab-pane" id="settings">
                         <form action="" method="POST" class="form-horizontal was-validated" enctype="multipart/form-data" accept-charset="ISO-8859-1">
@@ -144,7 +155,7 @@
                                         <div class="input-group-addon">
                                             <i class="fa fa-calendar"></i>
                                         </div>
-                                        <input type="date" class="form-control pull-right" id="born" name="born" value="@if($data['born'] != NULL){{ $data['born'] }}@else {{ '2002-01-01' }} @endif" placeholder="Tanggal Lahir">
+                                        <input type="date" class="form-control pull-right" id="born" name="born" value="{{($data['born'] != NULL)?$data['born']:'2002-01-01'}}" placeholder="Tanggal Lahir">
                                     </div>
                                 </div>
                             </div>
@@ -212,8 +223,29 @@
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-10">
-                                    <button type="submit" class="btn btn-primary saveButton" id="editSimpan"><i class="fas fa-save"></i>&ensp;Simpan Perubahan</button>
+                                    <button type="submit" class="btn btn-primary saveButton" data-type="Biodata"><i class="fas fa-save"></i>&ensp;Simpan Perubahan</button>
                                 </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane" id="mypassword">
+                        <form action="" method="POST" class="form-horizontal" accept-charset="ISO-8859-1">
+                            @csrf <input type="hidden" name="type" value="editpasswd" readonly>
+                            <div class="form-group form-row">
+                                <label for="old_pass" class="col-sm-2 control-label">Password Lama</label>
+                                <div class="col-sm-10">
+                                    <div class="input-group" id="the_old_pass">
+                                        <div class="input-group-addon">
+                                            <i class="fas fa-key"></i>
+                                        </div>
+                                        <input type="password" class="form-control" id="old_pass" value="" placeholder="Masukkan Password Lama Anda" onclick="this.placeholder=''" onblur="this.placeholder='Masukkan Password Lama Anda'" required>
+                                    </div>
+                                    <div id="feedback_oldpass"></div>
+                                </div>
+                            </div>
+                            <div id="setnewpassword"></div>
+                            <div class="form-group">
+                                <div class="col-sm-offset-2 col-sm-10"><input type="hidden" name="old_pass" id="back_old_pass" readonly hidden required><input type="hidden" name="new_pass" id="back_new_pass" readonly hidden required><input type="hidden" name="confirm_pass" id="back_confirm_pass" readonly hidden required><button type="submit" class="btn btn-primary saveButton" id="savenewpass" data-type="Password"><i class="fas fa-save"></i>&ensp;Simpan Perubahan</button></div>
                             </div>
                         </form>
                     </div>
@@ -228,7 +260,9 @@
 @section('footer')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@8.13.0/dist/sweetalert2.all.min.js" integrity="sha256-aakU0ciz46DahtBruJmV8isJWXw6TELTYFPcSVVcoFU=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/node-forge@0.7.0/dist/forge.min.js"></script>
 <script src="{{ asset('js/user_profile.js') }}"></script>
+
 <script src="/vendor/laravel-filemanager/js/lfm.js"></script>
 <script>
     $(document).ready(function() {

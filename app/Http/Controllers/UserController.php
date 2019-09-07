@@ -12,11 +12,16 @@ use App\Data_Peserta;
 use App\Guest_Otentifikasi as GO;
 use App\Acc_class;
 use App\PrivateChildsParents;
+use App\Record_Latihan;
+use App\Record_Budget;
+use App\Record_File;
+use App\Record_Spp;
 
 class UserController extends Controller
 {
     public function profile()
     {
+        $title = "Karate | Profile";
         if ((Auth::user()->status == 'bestnimda') || (Auth::user()->status == 'moderator') || (Auth::user()->status == 'treasurer') || (Auth::user()->status == 'instructor')) {
             $data = User::select(['users.id', 'users.status', 'users.name', 'users.email', 'users.born', 'users.phone', 'users.id_line', 'users.avatar', 'users.code', 'pelatih_data.msh_pelatih', 'users.created_at'])->where('email', '=', Auth::user()->email)->leftJoin('pelatih_data', 'users.code', '=', 'pelatih_data.kode_pelatih')->first()->toArray();
         } elseif (Auth::user()->status == 'participants') {
@@ -25,15 +30,12 @@ class UserController extends Controller
             $data = User::select(['id', 'status', 'name', 'email', 'born', 'phone', 'id_line', 'avatar', 'code', 'created_at'])->where('email', '=', Auth::user()->email)->first()->toArray();
         }
 
-        $title = "Karate | Profile";
-        // dd($data);
         return view('body.profile.lte_profile_home', compact(['title', 'data']));
     }
 
     public function profilesave(Request $data)
     {
         if ($data->type == 'editbio') {
-            // dd($data->all());
             if ((Auth::user()->status == 'bestnimda') || (Auth::user()->status == 'moderator') || (Auth::user()->status == 'treasurer') || (Auth::user()->status == 'instructor')) {
                 User::find(Auth::user()->id)->update([
                     'name' => $data->name,
@@ -70,8 +72,29 @@ class UserController extends Controller
                 ]);
                 return redirect()->back()->with('success', 'Biodata berhasil diperbarui');
             }
+        } elseif ($data->type == 'editpasswd') {
+            $validate = Validator::make($data->all(), [
+                'old_pass' => 'required|min:96|max:96',
+                'new_pass' => 'required|min:96|max:96',
+                'confirm_pass' => 'required|min:96|max:96|same:new_pass'
+            ]);
+
+            if ($validate->fails()) {
+                return redirect()->back()->with('failed', 'Harap Perhatikan Kembali Input Password Anda');
+            } else {
+                if (password_verify($data->old_pass, Auth::user()->password)) {
+                    $setNewPasswd = User::where('id', '=', Auth::user()->id)->update(['password' => bcrypt($data->new_pass)]);
+                    if ($setNewPasswd == TRUE) {
+                        return redirect()->route('logout');
+                    } else {
+                        return redirect()->back()->with('failed', 'Gagal Memperbarui Password');
+                    }
+                } else {
+                    return redirect()->back()->with('failed', 'Password Lama Anda Tidak Sesuai');
+                }
+            }
         } else {
-            # code...
+            return redirect()->route('home');
         }
     }
 
@@ -270,6 +293,134 @@ class UserController extends Controller
             return view('body.profile.lte_profile_view', compact(['title', 'bioProfile']));
         } else {
             return redirect()->back()->with('failed', 'Akun Tidak Ditemukan');
+        }
+    }
+
+    # AJAX METHOD
+    public function checkMyPasswdLegelity(Request $data)
+    {
+        if ($data->has('old_pass')) {
+            if (password_verify($data->old_pass, Auth::user()->password)) {
+                return ['true', '<div class="valid-feedback text-green text-bold" id="old_pass_feedback">Sipp!!... Password Benar!</div>', getInpFormForNewPassword()];
+            } else {
+                return ['false', '<div class="invalid-feedback text-red text-bold" id="old_pass_feedback">Oops!!... Password Salah!</div>', ''];
+            }
+        } else {
+            return NULL;
+        }
+    }
+
+    ## API REQUEST METHOD
+    public function getApiTimelineUser(Request $data)
+    {
+        $validate = Validator::make($data->all(), [
+            'find_as' => 'required|alpha_num',
+            'user_code' => 'required|alpha_num'
+        ]);
+
+        if ($validate->fails()) {
+            return response()->json(['error' => $validate->messages()], 422);
+        } else {
+            if ($data->find_as == 'pelatih') {
+                $getRecLatihan = Record_Latihan::select(['thsmt', 'kode_kelas_peserta as kelas', 'kode_peserta as peserta', 'kode_pelatih as pelatih', 'keterangan', 'durasi', 'created_at'])->where('kode_pelatih', '=', $data->user_code)->groupBy('created_at')->get();
+                (json_decode($getRecLatihan) != NULL) ? $recLatihan = $getRecLatihan->toArray() : $recLatihan = [];
+                for ($i = 0; $i < count($recLatihan); $i++) {
+                    $recLatihan[$i] += ['type' => 'latihan']; // add type of data
+                }
+                $getRecBudget = Record_Budget::select(['thsmt', 'kode_kelas as kelas', 'kode_peserta as peserta', 'kode_pj as pelatih', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'])->where('kode_pj', '=', $data->user_code)->get();
+                if (json_decode($getRecBudget) != NULL) {
+                    $recBudget = $getRecBudget->toArray();
+                    for ($i = 0; $i < count($recBudget); $i++) {
+                        $recBudget[$i] += ['type' => 'biaya']; // add type of data
+                        array_push($recLatihan, $recBudget[$i]); // push array data $recBudget
+                    }
+                }
+                $getRecFile = Record_File::select(['thsmt', 'kode_kelas as kelas', 'kode_peserta as peserta', 'kode_pj as pelatih', 'kode_file as jenis_file', 'file_info', 'created_at'])->where('kode_pj', '=', $data->user_code)->get();
+                if (json_decode($getRecFile) != NULL) {
+                    $recFile = $getRecFile->toArray();
+                    for ($i = 0; $i < count($recFile); $i++) {
+                        $recFile[$i] += ['type' => 'file']; // add type of data
+                        array_push($recLatihan, $recFile[$i]); // push array data $recFile
+                    }
+                }
+                $getRecSpp = Record_Spp::select(['thsmt', 'kode_kelas as kelas', 'kode_peserta as peserta', 'kredit', 'untuk_bulan', 'kode_pj as pelatih', 'created_at'])->where('kode_pj', '=', $data->user_code)->get();
+                if (json_decode($getRecSpp) != NULL) {
+                    $recSpp = $getRecSpp->toArray();
+                    for ($i = 0; $i < count($recSpp); $i++) {
+                        $recSpp[$i] += ['type' => 'spp']; // add type of data
+                        array_push($recLatihan, $recSpp[$i]); // push array data $recSpp
+                    }
+                }
+                usort($recLatihan, [$this, 'date_compare']);
+                if ($recLatihan) {
+                    return response()->json($this->convertArrayDataTimeline($recLatihan), 200);
+                }
+                return response()->json(['error' => 'Timeline Data Not Found'], 422);
+            } elseif ($data->find_as == 'peserta') {
+                $getRecLatihan = Record_Latihan::select(['thsmt', 'kode_kelas_peserta as kelas', 'kode_peserta as peserta', 'kode_pelatih as pelatih', 'keterangan', 'durasi', 'created_at'])->where('kode_peserta', '=', $data->user_code)->groupBy('created_at')->get();
+                (json_decode($getRecLatihan) != NULL) ? $recLatihan = $getRecLatihan->toArray() : $recLatihan = [];
+                for ($i = 0; $i < count($recLatihan); $i++) {
+                    $recLatihan[$i] += ['type' => 'latihan']; // add type of data
+                }
+                $getRecBudget = Record_Budget::select(['thsmt', 'kode_kelas as kelas', 'kode_peserta as peserta', 'kode_pj as pelatih', 'aggregate', 'kredit', 'keterangan', 'saldo', 'created_at'])->where('kode_peserta', '=', $data->user_code)->get();
+                if (json_decode($getRecBudget) != NULL) {
+                    $recBudget = $getRecBudget->toArray();
+                    for ($i = 0; $i < count($recBudget); $i++) {
+                        $recBudget[$i] += ['type' => 'biaya']; // add type of data
+                        array_push($recLatihan, $recBudget[$i]); // push array data $recBudget
+                    }
+                }
+                $getRecFile = Record_File::select(['thsmt', 'kode_kelas as kelas', 'kode_peserta as peserta', 'kode_pj as pelatih', 'kode_file as jenis_file', 'file_info', 'created_at'])->where('kode_peserta', '=', $data->user_code)->get();
+                if (json_decode($getRecFile) != NULL) {
+                    $recFile = $getRecFile->toArray();
+                    for ($i = 0; $i < count($recFile); $i++) {
+                        $recFile[$i] += ['type' => 'file']; // add type of data
+                        array_push($recLatihan, $recFile[$i]); // push array data $recFile
+                    }
+                }
+                $getRecSpp = Record_Spp::select(['thsmt', 'kode_kelas as kelas', 'kode_peserta as peserta', 'kredit', 'untuk_bulan', 'kode_pj as pelatih', 'created_at'])->where('kode_peserta', '=', $data->user_code)->get();
+                if (json_decode($getRecSpp) != NULL) {
+                    $recSpp = $getRecSpp->toArray();
+                    for ($i = 0; $i < count($recSpp); $i++) {
+                        $recSpp[$i] += ['type' => 'spp']; // add type of data
+                        array_push($recLatihan, $recSpp[$i]); // push array data $recSpp
+                    }
+                }
+                usort($recLatihan, [$this, 'date_compare']);
+                if ($recLatihan) {
+                    return response()->json($this->convertArrayDataTimeline($recLatihan), 200);
+                }
+                return response()->json(['error' => 'Timeline Data Not Found'], 422);
+            } else {
+                return response()->json(['error' => 'What Are You Looking For?'], 422);
+            }
+        }
+    }
+    function date_compare($tapi1, $tapi2)
+    {
+        $datetime1 = strtotime($tapi1['created_at']);
+        $datetime2 = strtotime($tapi2['created_at']);
+        return $datetime2 - $datetime1;
+    }
+    function convertArrayDataTimeline($array_data)
+    {
+        if (is_array($array_data) != NULL) {
+            for ($i = 0; $i < count($array_data); $i++) {
+                if ($array_data[$i]['type'] == 'latihan') {
+                    $convTimeline[] = ['thsmt' => makeSubstrFromThSmt($array_data[$i]['thsmt']), 'kelas' => getClassNameByCode($array_data[$i]['kelas']), 'peserta' => getNamePstByCode($array_data[$i]['peserta']), 'pelatih' => getNamePltByCode($array_data[$i]['pelatih']), 'keterangan' => getKetLatihanByCode($array_data[$i]['keterangan']), 'durasi' => $array_data[$i]['durasi'] . ' Jam', 'created_at' => conv_datetime($array_data[$i]['created_at']), 'type' => $array_data[$i]['type']];
+                } elseif ($array_data[$i]['type'] == 'biaya') {
+                    $convTimeline[] = ['thsmt' => makeSubstrFromThSmt($array_data[$i]['thsmt']), 'kelas' => getClassNameByCode($array_data[$i]['kelas']), 'peserta' => getNamePstByCode($array_data[$i]['peserta']), 'pelatih' => getNamePltByCode($array_data[$i]['pelatih']), 'aggregate' => $array_data[$i]['aggregate'], 'kredit' => 'Rp. ' . mycurrency($array_data[$i]['kredit']), 'keterangan' => $array_data[$i]['keterangan'], 'saldo' => 'Rp. ' . mycurrency($array_data[$i]['saldo']), 'created_at' => conv_datetime($array_data[$i]['created_at']), 'type' => $array_data[$i]['type']];
+                } elseif ($array_data[$i]['type'] == 'file') {
+                    $convTimeline[] = ['thsmt' => makeSubstrFromThSmt($array_data[$i]['thsmt']), 'kelas' => getClassNameByCode($array_data[$i]['kelas']), 'peserta' => getNamePstByCode($array_data[$i]['peserta']), 'pelatih' => getNamePltByCode($array_data[$i]['pelatih']), 'jenis_file' => getFileInfoByCode($array_data[$i]['jenis_file']), 'file_info' => $array_data[$i]['file_info'], 'created_at' => conv_datetime($array_data[$i]['created_at']), 'type' => $array_data[$i]['type']];
+                } elseif ($array_data[$i]['type'] == 'spp') {
+                    $convTimeline[] = ['thsmt' => makeSubstrFromThSmt($array_data[$i]['thsmt']), 'kelas' => getClassNameByCode($array_data[$i]['kelas']), 'peserta' => getNamePstByCode($array_data[$i]['peserta']), 'pelatih' => getNamePltByCode($array_data[$i]['pelatih']), 'kredit' => 'Rp. ' . mycurrency($array_data[$i]['kredit']), 'untuk_bulan' => getMonth($array_data[$i]['untuk_bulan']), 'created_at' => conv_datetime($array_data[$i]['created_at']), 'type' => $array_data[$i]['type']];
+                } else {
+                    # code...
+                }
+            }
+            return $convTimeline;
+        } else {
+            # code...
         }
     }
 }

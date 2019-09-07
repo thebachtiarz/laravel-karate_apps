@@ -50,6 +50,16 @@ function conv_getDate($datetime = '')
     }
 }
 
+function conv_getTime($datetime = '')
+{
+    if ($datetime) {
+        $date = date('H:i:s',  strtotime($datetime));
+        return $date;
+    } else {
+        # nothing
+    }
+}
+
 function conv_datetime($datetime = '')
 {
     if ($datetime) {
@@ -403,6 +413,19 @@ function getClassCodeByPstCode($kode_peserta = '')
     if ($kode_peserta) {
         $data = Data_Peserta::select(['kode_kelas_peserta'])->where('kode_peserta', '=', $kode_peserta)->first();
         return $data['kode_kelas_peserta'];
+    } else {
+        # code...
+    }
+}
+# get class code by peserta code array
+function getClassCodeByPstCodeArray($kode_peserta_array = '')
+{
+    if ($kode_peserta_array) {
+        for ($i = 0; $i < count($kode_peserta_array); $i++) {
+            $data = Data_Peserta::select(['kode_kelas_peserta'])->where('kode_peserta', '=', $kode_peserta_array)->first();
+            $kelas[] = $data['kode_kelas_peserta'];
+        }
+        return $kelas;
     } else {
         # code...
     }
@@ -807,14 +830,17 @@ function getRecSppPstByClassAndCodeInTbody($class_code = '', $kode_peserta = '')
         $getRecSpp = getRecSppPstByClassAndCode($class_code, $kode_peserta);
         if (json_decode($getRecSpp) != NULL) {
             $i = 1;
+            // $data;
             foreach ($getRecSpp as $rec) {
-                echo ($i == 1) ? '<tr style="background-color: #D4EDDA; color: #3E774B;">' : '<tr>';
+                $data = ($i == 1) ? '<tr style="background-color: #D4EDDA; color: #3E774B;">' : '<tr>';
                 $flag = ($i == 1) ? '<i class="fab fa-font-awesome-flag fa-xs"></i>' : $i;
-                echo '<td class="text-center">' . $flag . '</td><td class="text-center">' . conv_datetime($rec->created_at) . '</td><td class="text-center">Rp. ' . mycurrency($rec->kredit) . '</td><td class="text-center"> Pembayaran SPP ' . makeSubstrFromThSmt($rec->thsmt) . ' - ' . getMonth($rec->untuk_bulan) . '</td><td class="text-center">' . getNamePltByCode($rec->kode_pj) . '</td></tr>';
+                $data .= '<td class="text-center">' . $flag . '</td><td class="text-center">' . conv_datetime($rec->created_at) . '</td><td class="text-center">Rp. ' . mycurrency($rec->kredit) . '</td><td class="text-center">Pembayaran SPP ' . makeSubstrFromThSmt($rec->thsmt) . ' - ' . getMonth($rec->untuk_bulan) . '</td><td class="text-center">' . getNamePltByCode($rec->kode_pj) . '</td></tr>';
                 $i++;
+                $record[] = $data;
             }
+            return $record;
         } else {
-            echo '<tr><td colspan="5" class="text-center alert-danger" style="font-weight: bold;">Tidak Ada Record SPP</td></tr>';
+            return NULL;
         }
     } else {
         # code...
@@ -860,33 +886,31 @@ function createBreadcrumbByArrayOfCode($array_code)
 }
 
 # create option for get semester for search #NOT_USE
-function createOptionSemesterForSearch()
+function createOptionSemesterForSearch($thsmt = '')
 {
     $year = date('y');
-    if (isset($_GET['thsmt'])) {
-        $thsmt = $_GET['thsmt'];
-    } else {
-        $thsmt = '';
-    }
-
-    $opt = '';
     //  ambil 3 tahun ke belakang
     for ($p = 3; $p >= 1; $p--) {
         $thnp = $year - $p;
-        // $retVal = ($thsmt == ($thnp - 1) . $thnp . '02') ? ' selected ' : '';
-        $opt .= '<option value="' . ($thnp - 1) . $thnp . '02">Th. 20' . ($thnp - 1) . '/20' . $thnp . ' - Smt. 2</option>';
-        $opt .= '<option value="' . $thnp . ($thnp + 1) . '01">Th. 20' . $thnp . '/20' . ($thnp + 1) . ' - Smt. 1</option>';
+        echo ($thsmt == (($thnp - 1) . $thnp . '02')) ? '<option selected' : '<option';
+        echo ' value="' . ($thnp - 1) . $thnp . '02">Th. 20' . ($thnp - 1) . '/20' . $thnp . ' - Smt. 2</option>';
+        echo ($thsmt == ($thnp . ($thnp + 1) . '01')) ? '<option selected' : '<option';
+        echo ' value="' . $thnp . ($thnp + 1) . '01">Th. 20' . $thnp . '/20' . ($thnp + 1) . ' - Smt. 1</option>';
     }
     //  ambil tahun sekarang
-    $opt .= '<option value="' . ($year - 1) . $year . '02">Th. 20' . ($year - 1) . '/20' . $year . ' - Smt. 2</option>';
-    $opt .= '<option class="selected" value="' . $year . ($year + 1) . '01">Th. 20' . $year . '/20' . ($year + 1) . ' - Smt. 1</option>';
+    echo ($thsmt == (($year - 1) . $year . '02')) ? '<option selected' : '<option';
+    echo ' value="' . ($year - 1) . $year . '02">Th. 20' . ($year - 1) . '/20' . $year . ' - Smt. 2</option>';
+    echo ($thsmt == ($year . ($year + 1) . '01')) ? '<option selected' : '<option';
+    echo ' value="' . $year . ($year + 1) . '01">Th. 20' . $year . '/20' . ($year + 1) . ' - Smt. 1</option>';
     //  ambil 3 tahun ke depan
     for ($n = 1; $n <= 1; $n++) {
         $thnn = $year + $n;
-        $opt .= '<option value="' . ($thnn - 1) . $thnn . '02">Th. 20' . ($thnn - 1) . '/20' . $thnn . ' - Smt. 2</option>';
-        $opt .= '<option value="' . $thnn . ($thnn + 1) . '01">Th. 20' . $thnn . '/20' . ($thnn + 1) . ' - Smt. 1</option>';
+        echo ($thsmt == (($thnn - 1) . $thnn . '02')) ? '<option selected' : '<option';
+        echo ' value="' . ($thnn - 1) . $thnn . '02">Th. 20' . ($thnn - 1) . '/20' . $thnn . ' - Smt. 2</option>';
+        echo ($thsmt == ($thnn . ($thnn + 1) . '01')) ? '<option selected' : '<option';
+        echo ' value="' . $thnn . ($thnn + 1) . '01">Th. 20' . $thnn . '/20' . ($thnn + 1) . ' - Smt. 1</option>';
     }
-    echo $opt;
+    // dd($thsmt);
 }
 
 # create option select semester by class code and peserta code (select by type)

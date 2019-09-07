@@ -42,8 +42,7 @@
                                 </div>
                                 <div class="form-group {{ $errors->has('password') ? 'has-error' : '' }}">
                                     <label for="passwd_login" class="control-label sr-only">Password</label>
-                                    <input type="password" class="form-control" id="passwd_login" name="password" placeholder="@if($errors->get('password')) Isi Password dengan benar @else Password @endif" onclick="this.placeholder=''" onblur="this.placeholder='@if($errors->get('password')) Isi Password dengan benar @else Password @endif'">
-                                    <input type="hidden" name="hide" id="logHide" />
+                                    <input type="password" class="form-control" id="passwd_login" placeholder="@if($errors->get('password')) Isi Password dengan benar @else Password @endif" onclick="this.placeholder=''" onblur="this.placeholder='@if($errors->get('password')) Isi Password dengan benar @else Password @endif'">
                                 </div>
                                 <!-- <div class="form-group clearfix">
 									<label class="fancy-checkbox element-left">
@@ -52,11 +51,11 @@
 									</label>
 								</div> -->
                                 @if(session('pull'))<input type="hidden" name="count" value="{{ session('pull') }}">@endif
+                                <input type="hidden" name="password" id="back_passwd_login" readonly required>
                                 <button type="submit" class="btn btn-primary btn-lg btn-block" onclick="return encLog()">LOGIN</button>
-                                <div class="bottom text-left">
-                                    <i class="fas fa-user-plus"></i>&emsp;<a href="/daftar">Daftar</a>
-                                    <br>
-                                    <i class="fas fa-user-lock"></i>&emsp;<a href="/lupa_password">Lupa Password?</a>
+                                <div class="bottom d-flex justify-content-between">
+                                    <i class="fas fa-user-plus"></i>&ensp;<a href="/daftar">Daftar</a>&emsp;
+                                    <i class="fas fa-user-lock"></i>&ensp;<a href="/lupa_password">Lupa Password?</a>
                                 </div>
                             </form>
                         </div>

@@ -20,6 +20,7 @@
         margin-left: -4px;
     }
 </style>
+<meta name="csrf-token" content="{{ csrf_token() }}" />
 @endsection
 
 @section('content')
@@ -52,13 +53,15 @@
         <div class="col-md-7">
             <div class="nav-tabs-custom">
                 <ul class="nav nav-tabs">
-                    <li class="active"><a href="#classdetail" data-toggle="tab" aria-expanded="true">Warga Kelas</a></li>
+                    <li class="active"><a href="#classresident" data-toggle="tab" aria-expanded="true">Warga Kelas</a></li>
                     <li class=""><a href="#editkelas" data-toggle="tab" aria-expanded="false">Edit Kelas</a></li>
                     <li class=""><a href="#syaratujian" data-toggle="tab" aria-expanded="false">Persyaratan Ujian</a></li>
                     <li class=""><a href="#spp" data-toggle="tab" aria-expanded="false">SPP Kelas</a></li>
+                    <li class=""><a href="#thsmt" data-toggle="tab" aria-expanded="false" {!! (getThnSmtClassByCode($data_kelas['kode_kelas']) !=getThSmtNow()) ? 'id="blinkIt"' : '' !!}>Tahun Semester {!! (getThnSmtClassByCode($data_kelas['kode_kelas']) != getThSmtNow()) ? '<i class="fas fa-exclamation-circle" style="color: #f96;"></i>' : '' !!}</a></li>
                 </ul>
-                <div class="tab-content">
-                    <div class="tab-pane active" id="classdetail">
+
+                <div class=" tab-content">
+                    <div class="tab-pane active" id="classresident">
                         <div class="row">
                             <div class="col-sm-4">
                                 <div class="small-box bg-aqua">
@@ -69,7 +72,7 @@
                                     <div class="icon">
                                         <i class="fas fa-users"></i>
                                     </div>
-                                    <a href="" class="small-box-footer GridButton showToggle" id="dataPesertaToggle" data-goto="dataPeserta" data-need="getdatapeserta" data-kodekelas="{{ $data_kelas['kode_kelas'] }}" data-send="thisDataPeserta" onclick="return false;"><i class="fas fa-tasks"></i>&ensp;Kelola Peserta</a>
+                                    <a href="" class="small-box-footer GridButton showToggle page-scroll" id="dataPesertaToggle" data-goto="dataPeserta" data-need="getdatapeserta" data-kodekelas="{{ $data_kelas['kode_kelas'] }}" data-send="thisDataPeserta" onclick="return false;"><i class="fas fa-tasks"></i>&ensp;Kelola Peserta</a>
                                 </div>
                             </div>
                             <div class="col-sm-4">
@@ -81,7 +84,7 @@
                                     <div class="icon">
                                         <i class="fas fa-chalkboard-teacher"></i>
                                     </div>
-                                    <a href="" class="small-box-footer GridButton showToggle" id="addPelatihToggle" data-goto="addPelatih" data-need="getdatapelatih" data-kodekelas="{{ $data_kelas['kode_kelas'] }}" data-send="thisDataPelatih" onclick="return false;"><i class="fas fa-tasks"></i>&ensp;Kelola Pelatih</a>
+                                    <a href="" class="small-box-footer GridButton showToggle page-scroll" id="addPelatihToggle" data-goto="addPelatih" data-need="getdatapelatih" data-kodekelas="{{ $data_kelas['kode_kelas'] }}" data-send="thisDataPelatih" onclick="return false;"><i class="fas fa-tasks"></i>&ensp;Kelola Pelatih</a>
                                 </div>
                             </div>
                             <div class="col-sm-4">
@@ -93,19 +96,41 @@
                                     <div class="icon">
                                         <i class="fas fa-wallet"></i>
                                     </div>
-                                    <a href="" class="small-box-footer GridButton showToggle" id="addBendaharaToggle" data-goto="addBendahara" data-need="getdatabendahara" data-kodekelas="{{ $data_kelas['kode_kelas'] }}" data-send="thisDataBendahara" onclick="return false;"><i class="fas fa-tasks"></i>&ensp;Kelola Bendahara</a>
+                                    <a href="" class="small-box-footer GridButton showToggle page-scroll" id="addBendaharaToggle" data-goto="addBendahara" data-need="getdatabendahara" data-kodekelas="{{ $data_kelas['kode_kelas'] }}" data-send="thisDataBendahara" onclick="return false;"><i class="fas fa-tasks"></i>&ensp;Kelola Bendahara</a>
                                 </div>
                             </div>
                         </div>
                         <section class="dataPeserta addHiddenToggle" id="dataPeserta" style="margin-top:15px;" hidden>
-                            <div class="row">
-                                <div class="col-sm-12">
-                                    <button class="btn btn-primary GridButton" data-toggle="modal" data-target="#add_peserta"><i class="fas fa-plus"></i>&ensp;Tambah Peserta</button>
+                            <div class="nav-tabs-custom tab-inverse">
+                                <ul class="nav nav-tabs">
+                                    <li class="active"><a href="#peserta_kelas" data-toggle="tab">Peserta</a></li>
+                                    <li><a href="#peserta_tingkat" data-toggle="tab">Tingkat</a></li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div class="tab-pane active" id="peserta_kelas">
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <button class="btn btn-primary GridButton" data-toggle="modal" data-target="#add_peserta"><i class="fas fa-plus"></i>&ensp;Tambah Peserta</button>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <!-- data ajax here -->
+                                            <div class="col-sm-12" id="thisDataPeserta"></div>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane" id="peserta_tingkat">
+                                        <div class="row">
+                                            <!-- data ajax here -->
+                                            <div class="col-sm-12" id="thisDataTingkatPeserta"></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-sm-12" id="newFormRaporPeserta">
+                                                <h3>Form Rapor</h3>
+                                                <p>Pengurus Ranting dapat menambahkan data rapor peserta ketika peserta dinyatakan naik kyu setelah ujian</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <!-- data ajax here -->
-                                <div class="col-sm-12" id="thisDataPeserta"></div>
                             </div>
                         </section>
                         <section class="addPelatih addHiddenToggle" id="addPelatih" style="margin-top:15px;" hidden>
@@ -114,7 +139,7 @@
                                     @csrf <input type="hidden" name="type" value="addPelatih" readonly>
                                     <div class="col-sm-8">
                                         <div class="form-group">
-                                            <input type="email" class="form-control" id="getNamaPelatih" name="pelatih_baru" data-ajaxjson="newpelatih" placeholder="Tambah Pelatih (Masukkan Email)" onclick="this.placeholder=''" onblur="this.placeholder='Tambah Pelatih (Masukkan Email)'" required>
+                                            <input type="email" class="form-control" id="getNamaPelatih" name="pelatih_baru" data-ajaxjson="newpelatih" placeholder="Tambah Pelatih (Masukkan Nama)" onclick="this.placeholder=''" onblur="this.placeholder='Tambah Pelatih (Masukkan Nama)'" required>
                                         </div>
                                     </div>
                                     <div class="col-sm-4">
@@ -251,7 +276,32 @@
                                 <input type="hidden" class="form-control" id="spp_kelas" name="spp_kelas" value="{{ $data_kelas['spp'] }}" minlength="4" maxlength="6" readonly>
                             </div>
                             <input type="hidden" name="kode_kelas" value="{{ $data_kelas['kode_kelas'] }}" readonly>
-                            <button type="submit" class="btn btn-primary saveButton" data-type="Biaya Ujian"><i class="fas fa-save"></i>&ensp;Simpan Perubahan</button>
+                            <button type="submit" class="btn btn-primary saveButton" data-type="Biaya SPP"><i class="fas fa-save"></i>&ensp;Simpan Perubahan</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane" id="thsmt">
+                        @php
+                        if(getThnSmtClassByCode($data_kelas['kode_kelas']) == getThSmtNow()){
+                        $infoThsmt = ['info', 'Tahun Semester menunjukkan waktu tahun ajaran kelas saat ini. Mengganti Tahun Semester akan berpengaruh pada hasil penyimpanan data saat melakukan record.'];
+                        }
+                        else{
+                        $infoThsmt = ['warning', 'Tahun Semester pada kelas ini perlu dilakukan pembaruan, Karate Apps menyarankan untuk mengganti ke ' . createThSmtInfoPeserta(getThSmtNow())];
+                        }
+                        @endphp
+                        <div class="alert alert-{{ $infoThsmt[0] }}">
+                            <h4><i class="fas fa-info-circle"></i> Info!</h4>
+                            <p class="text-black" style="font-style: italic; font-weight: bold;">{{ $infoThsmt[1] }}</p>
+                        </div>
+                        <form action="" method="POST" class="was-validated" accept-charset="ISO-8859-1">
+                            @csrf <input type="hidden" name="type" value="thsmtkelas" readonly>
+                            <div class="form-group">
+                                <label for="thsmtkelas">Ganti Tahun Semester</label>
+                                <select name="thsmt_kelas" class="form-control" id="thsmtkelas">
+                                    {{ createOptionSemesterForSearch(getThnSmtClassByCode($data_kelas['kode_kelas'])) }}
+                                </select>
+                            </div>
+                            <input type="hidden" name="kode_kelas" value="{{ $data_kelas['kode_kelas'] }}" readonly>
+                            <button type="submit" class="btn btn-primary saveButton" data-type="Tahun Semester"><i class="fas fa-save"></i>&ensp;Simpan Perubahan</button>
                         </form>
                     </div>
                 </div>
@@ -260,40 +310,7 @@
     </div>
 </section>
 
-<!-- Modal Add Peserta -->
-<div class="modal fade" id="add_peserta" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <form action="/kelas/add_peserta" method="POST" class="was-validated" accept-charset="ISO-8859-1">
-                @csrf <input type="hidden" name="kode_kelas" value="{{ $data_kelas['kode_kelas'] }}" readonly>
-                <div class="modal-header alert-info">
-                    <h3 class="modal-title" id="exampleModalLabel">Tambah Peserta</h3>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group {{ $errors->has('nama_peserta') ? 'has-error' : '' }}">
-                        <label for="nama_peserta">Nama Peserta</label>
-                        <input type="text" class="form-control" id="nama_peserta" name="nama_peserta" placeholder="@if($errors->has('nama_peserta')){{ $errors->first('nama_peserta') }}@else{{ 'Nama Peserta' }}@endif" value="{{ old('nama_peserta') }}" onclick="this.placeholder=''" onblur="this.placeholder='@if($errors->has('nama_peserta')){{ $errors->first('nama_peserta') }}@else{{ 'Nama Peserta' }}@endif'">
-                    </div>
-                    <div class="form-group {{ $errors->has('tingkat') ? 'has-error' : '' }}">
-                        <label for="tingkat">Tingkat / Kyu</label>
-                        <select class="form-control" id="tingkat" name="tingkat">
-                            <option value="" disabled selected hidden>@if($errors->has('tingkat')){{ $errors->first('tingkat') }}@else{{ 'Tingkat' }}@endif</option>
-                            @for ($i = 10; $i >= 1; $i--)<option value="{{ $i }}" {{ (old('tingkat') == $i) ? 'selected' : '' }}>Kyu {{ $i }} / {{ get_belt_by_kyu($i) }}</option>@endfor
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="noinduk">Nomor Induk Anggota</label>
-                        <input type="text" class="form-control" id="noinduk" name="noinduk" placeholder="Nomor Induk" value="{{ old('noinduk') }}" onclick="this.placeholder=''" onblur="this.placeholder='Nomor Induk'">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@include('body.modal_form.lte_modal_based_auth')
 
 @endsection
 
@@ -301,6 +318,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@8.13.0/dist/sweetalert2.all.min.js" integrity="sha256-aakU0ciz46DahtBruJmV8isJWXw6TELTYFPcSVVcoFU=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.js"></script>
 <script src="{{ asset('js/moderator_pengaturan.js') }}"></script>
 <script src="/vendor/laravel-filemanager/js/lfm.js"></script>
 <script>
@@ -308,7 +326,6 @@
         $('#lfm').filemanager('image');
     });
 </script>
-
 <script>
     $('.biayaUjian, .sppKelas').on('keyup', function() {
         var rupiah = $(this).val();
@@ -329,7 +346,6 @@
         return prefix == undefined ? rupiah : rupiah ? "Rp. " + rupiah : "";
     }
 </script>
-
 <script>
     $(".biayaUjian, .sppKelas").keyup(function() {
         let goto = $(this).data('goto');
@@ -339,5 +355,15 @@
         $('input#' + goto).val(res);
     });
 </script>
-
+<script>
+    $(function() {
+        $("#blinkIt").delay(0).animate({
+            "background-color": "#f96"
+        }, 0, function() {
+            $("#blinkIt").animate({
+                "background-color": "#fff"
+            }, 5000);
+        });
+    });
+</script>
 @endsection

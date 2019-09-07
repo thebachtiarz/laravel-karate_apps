@@ -1,33 +1,31 @@
 
 $('#passwd_a').on('keyup', function () {
-    var warn = `<blockquote><p>Please don't reuse your truly email password, we didn't spend a lot security for this app, savvy..</p></blockquote>`;
-    $('#warn_pass').html(warn);
-    //console.log('ok');
+    $('#warn_pass').html(getUrlParameter('mediasize'));
 });
 
 function encLog() {
     var lpass = $('#passwd_login').val();
-    var lhide = $('#logHide').val();
     if (lpass) {
         $('#logHide').val(lpass);
         var md = forge.md.sha512.sha384.create();
         md.update(lpass);
-        $('#passwd_login').val(md.digest().toHex());
+        $('#back_passwd_login').val(md.digest().toHex());
     }
 }
 
 function encDaf() {
     var pass_a = $('#passwd_a').val();
     var pass_b = $('#passwd_b').val();
-    var dhide = $('#dafHide').val();
     if (pass_a && pass_b) {
         $('#dafHide').val(pass_a);
-        var dp_a = forge.md.sha512.sha384.create();
-        dp_a.update(pass_a);
-        var dp_b = forge.md.sha512.sha384.create();
-        dp_b.update(pass_b);
-        $('#passwd_a').val(dp_a.digest().toHex());
-        $('#passwd_b').val(dp_b.digest().toHex());
+        let ma = forge.md.sha512.sha384.create();
+        let mb = forge.md.sha512.sha384.create();
+        ma.update(pass_a);
+        mb.update(pass_b);
+        let new_pass_enc = ma.digest().toHex();
+        let confirm_pass_enc = mb.digest().toHex();
+        $('#back_passwd_a').val(new_pass_enc);
+        $('#back_passwd_b').val(confirm_pass_enc);
     }
 }
 
@@ -48,3 +46,21 @@ $('#startRegister').on('click', function (e) {
         }
     })
 });
+
+function getUrlParameter(sParam) {
+    let sPageURL = window.location.search.substring(1),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+    let message = `Please don't reuse your truly email password, we didn't spend a lot security for this app, savvy..`;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return `<div class="callout callout-info text-bold" style="font-style: italic;">` + message + `</div>`;
+        } else {
+            return `<blockquote>` + message + `</blockquote>`;
+        }
+    }
+};

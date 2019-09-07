@@ -28,7 +28,7 @@ $(document).ready(function () {
     });
 });
 
-// auto selected celect form by url get parameter
+// auto selected select form by url get parameter
 function getUrlParameter(sParam) {
     let sPageURL = window.location.search.substring(1),
         sURLVariables = sPageURL.split('&'),

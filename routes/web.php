@@ -59,6 +59,7 @@ Route::group(['middleware' => ['preventBackHistory', 'auth', 'checkRole:moderato
         return getAllModReqOttInTable();
     });
     Route::get('/ajaxgettable/getdatapeserta', 'ModeratorController@getdatapeserta');
+    Route::get('/ajaxgettable/getdatatingkatpeserta', 'ModeratorController@getdatatingkatpeserta');
     Route::get('/ajaxgettable/getdatapelatih', 'ModeratorController@getdatapelatih');
     Route::get('/ajaxgettable/getdatabendahara', 'ModeratorController@getdatabendahara');
     Route::get('/ajaxgettable/newpelatih', 'ModeratorController@caripelatihbaru');
@@ -139,6 +140,9 @@ Route::group(['middleware' => ['preventBackHistory', 'auth', 'needOtentification
 // bestnimda, moderator, treasurer, instructor, participants, parents
 Route::group(['middleware' => ['preventBackHistory', 'auth', 'checkRole:bestnimda,moderator,treasurer,instructor,participants,parents']], function () {
     Route::get('/profile/account/{slugname}', 'UserController@viewprofile');
+
+    // ajax request
+    Route::post('/kelas/record/latihan/detail', 'KelasController@getDetailPesertaLatihanByDateAndKelas'); // get detail peserta training by date
 });
 
 // all status
@@ -146,4 +150,7 @@ Route::group(['middleware' => ['preventBackHistory', 'auth', 'checkRole:bestnimd
     Route::get('/home', 'HomeController@home')->name('home');
     Route::get('/profile', 'UserController@profile')->name('user.profile');
     Route::post('/profile', 'UserController@profilesave')->name('user.profile');
+
+    // ajax request
+    Route::post('/profile/checkmypassword', 'UserController@checkMyPasswdLegelity');
 });

@@ -16,7 +16,11 @@ $(document).ready(function () {
 		});
 	});
 	$('.page-scroll').on('click', function (e) {
-		var addr = $(this).attr('href');
+		if ($(this).attr('href')) {
+			var addr = $(this).attr('href');
+		} else {
+			var addr = '#' + $(this).data('goto');
+		}
 		var elmAddr = $(addr);
 		$('html').animate({
 			scrollTop: elmAddr.offset().top - 95
@@ -122,44 +126,78 @@ $('.showToggle').on('click', function () {
 		data: { kelas: kodekelas },
 		dataType: 'json',
 		success: function (data) {
-			if (dataNeed == 'getdatapeserta') {
-				var header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Nama Peserta</th><th>Tingkat</th><th>No Induk</th><th>Aksi</th></thead><tbody>';
-			} else {
-				var header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Nama</th><th>Akses Sejak</th><th>Aksi</th></thead><tbody>';
-			}
-			var showData = '';
-			var footer = '</tbody></table></div>';
-			var x;
-			for (x = 0; x < data.length; x++) {
+			if (data[0] == 'true') {
 				if (dataNeed == 'getdatapeserta') {
-					showData += '<tr><td> ' + (x + 1) + '</td><td>' + data[x].nama_peserta + '</td><td>Kyu ' + data[x].tingkat + '</td><td>' + data[x].noinduk + '</td><td><a href="/pengaturan/peserta/profile/' + kodekelas + '/' + data[x].kode_peserta + '" class="btn btn-sm btn-info">Profil</a>&ensp;<a href="/pengaturan/peserta/delete/' + kodekelas + '/' + data[x].kode_peserta + '" class="btn btn-sm btn-danger delete-req" data-type="Peserta">Hapus</a></td></tr>';
+					var header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Nama Peserta</th><th>Tingkat</th><th>No Induk</th><th>Aksi</th></thead><tbody>';
 				} else {
-					let created_at = new Date(data[x].created_at).toDateString();
-					showData += '<tr><td> ' + (x + 1) + '</td><td>' + data[x].name + '</td><td>' + created_at + '</td><td><button class="btn btn-sm btn-danger dataHapus" value="' + data[x].code + '">Hapus</button></td></tr>';
+					var header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Nama</th><th>Akses Sejak</th><th>Aksi</th></thead><tbody>';
 				}
+				var showData = '';
+				var footer = '</tbody></table></div>';
+				var x;
+				for (x = 0; x < data[1].length; x++) {
+					if (dataNeed == 'getdatapeserta') {
+						showData += '<tr><td> ' + (x + 1) + '</td><td>' + data[1][x].peserta + '</td><td>' + data[1][x].tingkat + '</td><td>' + data[1][x].induk + '</td><td><a href="/pengaturan/peserta/profile/' + data[1][x].kelas + '/' + data[1][x].kode + '" class="btn btn-sm btn-info">Profil</a>&ensp;<a href="/pengaturan/peserta/delete/' + data[1][x].kelas + '/' + data[1][x].kode + '" class="btn btn-sm btn-danger delete-req" data-type="Peserta">Hapus</a></td></tr>';
+					} else {
+						showData += '<tr><td> ' + (x + 1) + '</td><td>' + data[1][x].pelatih + '</td><td>' + data[1][x].tgl_akses + '</td><td><button class="btn btn-sm btn-danger dataHapus" value="' + data[1][x].kode + '">Hapus</button></td></tr>';
+					}
+				}
+				$('#' + send).html(header + showData + footer);
+				dataTingkatPeserta(kodekelas);
+			} else {
+				let message = `<div class="callout callout-danger"><p><i class="fas fa-info-circle"></i>&ensp;` + data[1] + `</p></div>`;
+				$('#' + send).html(message);
 			}
-			$('#' + send).html(header + showData + footer);
 		}
 	});
 });
 
+// get tingkat peserta
+function dataTingkatPeserta(kode_kelas) {
+	// $.ajaxSetup({
+	// 	headers: {
+	// 		'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+	// 	}
+	// });
+	$.ajax({
+		type: 'GET',
+		url: '/ajaxgettable/getdatatingkatpeserta',
+		data: { kelas: kode_kelas },
+		success: function (data) {
+			if (data[0] == 'true') {
+				var header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Nama Peserta</th><th>Tingkat</th><th>Aksi</th></thead><tbody>';
+				var showData = '';
+				var footer = '</tbody></table></div>';
+				var x;
+				for (x = 0; x < data[1].length; x++) {
+					showData += '<tr><td> ' + (x + 1) + '</td><td>' + data[1][x].peserta + '</td><td>' + data[1][x].tingkat + '</td><td><button class="btn btn-sm btn-info text-bold" data-open="formreportbook" data-peserta="' + data[1][x].kode + '" data-kelas="' + data[1][x].kelas + '">Buka Buku Rapor</button></td></tr>';
+				}
+				$('#thisDataTingkatPeserta').html(header + showData + footer);
+			} else {
+				let message = `<div class="callout callout-danger"><p><i class="fas fa-info-circle"></i>&ensp;` + data[1] + `</p></div>`;
+				$('#thisDataTingkatPeserta').html(message);
+			}
+		}
+	});
+}
+
 // get new pelatih
 $('#getNamaPelatih').on('keyup', function () {
-	const keyEmail = $(this).val();
-	if (keyEmail.length >= 3) {
+	const keyName = $(this).val();
+	if (keyName.length >= 3) {
 		var dataNeed = $(this).data('ajaxjson');
-		const header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Email</th><th>Nama</th><th>Aksi</th></thead><tbody>';
+		const header = '<div class="table-responsive"><table class="table table-hover table-condensed"><thead class="bg-primary"><th>#</th><th>Nama</th><th>Email</th><th>Aksi</th></thead><tbody>';
 		const footer = '</tbody></table></div>';
 		$.ajax({
 			type: 'GET',
 			url: '/ajaxgettable/' + dataNeed,
-			data: { key: keyEmail },
+			data: { key: keyName },
 			dataType: 'json',
 			success: function (data) {
 				var showData = '';
 				var z;
 				for (z = 0; z < data.length; z++) {
-					showData += '<tr><td> ' + (z + 1) + '</td><td>' + data[z].email + '</td><td>' + data[z].name + '</td><td><button class="btn btn-sm btn-primary pilihPelatih" value="' + data[z].email + '">Pilih</button></td></tr >';
+					showData += '<tr><td> ' + (z + 1) + '</td><td>' + data[z].name + '</td><td>' + data[z].email + '</td><td><button class="btn btn-sm btn-primary pilihPelatih" value="' + data[z].email + '">Pilih</button></td></tr >';
 				}
 				$('#getNamaPelatihData').html(header + showData + footer);
 				$('.pilihPelatih').on('click', function () {

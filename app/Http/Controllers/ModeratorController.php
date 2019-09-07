@@ -208,13 +208,29 @@ class ModeratorController extends Controller
             ]);
 
             if ($validate->fails()) {
-                return redirect()->back()->with('failed', 'Terdapat Kesalahan Dalam Proses spp');
+                return redirect()->back()->with('failed', 'Terdapat Kesalahan Dalam Proses SPP');
             } else {
                 $setSPP = Kelas::where('kode_kelas', '=', $data->kode_kelas)->update(['spp' => $data->spp_kelas]);
                 if ($setSPP == TRUE) {
                     return redirect()->back()->with('success', 'Berhasil Menetapkan Biaya SPP');
                 } else {
                     return redirect()->back()->with('failed', 'Gagal Menetapkan Biaya SPP');
+                }
+            }
+        } elseif ($data->type == "thsmtkelas") {
+            $validate = Validator::make($data->all(), [
+                'kode_kelas' => 'required',
+                'thsmt_kelas' => 'required|numeric|digits_between:6,6'
+            ]);
+
+            if ($validate->fails()) {
+                return redirect()->back()->with('failed', 'Tahun Semester Tidak Sesuai');
+            } else {
+                $setThSmt = Kelas::where('kode_kelas', '=', $data->kode_kelas)->update(['thsmt' => $data->thsmt_kelas]);
+                if ($setThSmt == TRUE) {
+                    return redirect()->back()->with('success', 'Berhasil Mengganti Tahun Semester');
+                } else {
+                    return redirect()->back()->with('failed', 'Gagal Mengganti Tahun Semester');
                 }
             }
         } else {
@@ -300,12 +316,20 @@ class ModeratorController extends Controller
                     Data_Peserta::where('kode_peserta', '=', $data->code_ditemukan)->update(['nama_peserta' => $data->nama_pemohon]);
                 } elseif ($new_stat['asal_newstat'] == '2') {
                     // cek apakah code_ditemukan(anak) sudah membuat akun pada apps
-                    $checkPst = User::select(['name'])->where('code', '=', $data->code_ditemukan)->first();
-                    if ($checkPst['name'] != NULL) {
+                    $checkPstUser = User::select(['name'])->where('code', '=', $data->code_ditemukan)->first();
+                    if ($checkPstUser['name'] != NULL) {
                         // cek apakah user ini adalah orang tua ataukah masih tamu
                         $checkprt = User::select(['status', 'code'])->where('email', '=', $data->email_pemohon)->first();
                         if ($checkprt['status'] == 'parents') {
-                            PrivateChildsParents::create(['parents_code' => $checkprt['code'], 'childs_code' => $data->code_ditemukan, 'kode_kelas' => getClassCodeByPstCode($data->code_ditemukan)]);
+                            // cek apakah orang tua sudah menambahkan peserta tujuan atau belum
+                            $checkPstPCP = PrivateChildsParents::where([['parents_code', '=', $checkprt['code']], ['childs_code', '=', $data->code_ditemukan]])->first();
+                            if ($checkPstPCP['id'] == NULL) {
+                                PrivateChildsParents::create(['parents_code' => $checkprt['code'], 'childs_code' => $data->code_ditemukan, 'kode_kelas' => getClassCodeByPstCode($data->code_ditemukan)]);
+                            } else {
+                                DB::rollback();
+                                GO::where('asal_email', '=', $data->email_pemohon)->delete();
+                                return redirect('/pengaturan')->with('failed', 'Peserta sudah pernah ditambahkan');
+                            }
                         } else {
                             $new_code = get_randChar(64);
                             User::where('email', '=', $data->email_pemohon)->update(['status' => convStatUserToStatName($new_stat['asal_newstat']), 'code' => $new_code]);
@@ -384,9 +408,39 @@ class ModeratorController extends Controller
         if ($key->has('kelas')) {
             $check = checkAuthAccClass($key->kelas);
             if ($check == 'OK') {
-                return Data_Peserta::where('kode_kelas_peserta', '=', $key->kelas)->get()->toJson();
+                $data = Data_Peserta::where('kode_kelas_peserta', '=', $key->kelas)->orderBy('nama_peserta', 'asc')->get();
+                if (json_decode($data) != NULL) {
+                    for ($i = 0; $i < count($data); $i++) {
+                        $peserta[] = ['peserta' => $data[$i]['nama_peserta'], 'tingkat' => 'Kyu ' . $data[$i]['tingkat'] . ' / ' . get_belt_by_kyu($data[$i]['tingkat']), 'induk' => (isset($data[$i]['noinduk'])) ? $data[$i]['noinduk'] : '', 'kode' => $data[$i]['kode_peserta'], 'kelas' => $data[$i]['kode_kelas_peserta']];
+                    }
+                    return ['true', $peserta];
+                } else {
+                    return ['false', 'Peserta Tidak Ditemukan'];
+                }
             } else {
-                # code...
+                return ['false', 'Kelas Tidak Ditemukan'];
+            }
+        } else {
+            # code...
+        }
+    }
+
+    public function getdatatingkatpeserta(Request $key)
+    {
+        if ($key->has('kelas')) {
+            $check = checkAuthAccClass($key->kelas);
+            if ($check == 'OK') {
+                $data = Data_Peserta::where('kode_kelas_peserta', '=', $key->kelas)->orderBy('nama_peserta', 'asc')->get();
+                if (json_decode($data) != NULL) {
+                    for ($i = 0; $i < count($data); $i++) {
+                        $peserta[] = ['peserta' => $data[$i]['nama_peserta'], 'tingkat' => 'Kyu ' . $data[$i]['tingkat'] . ' / ' . get_belt_by_kyu($data[$i]['tingkat']), 'induk' => (isset($data[$i]['noinduk'])) ? $data[$i]['noinduk'] : '', 'kode' => $data[$i]['kode_peserta'], 'kelas' => $data[$i]['kode_kelas_peserta']];
+                    }
+                    return ['true', $peserta];
+                } else {
+                    return ['false', 'Peserta Tidak Ditemukan'];
+                }
+            } else {
+                return ['false', 'Kelas Tidak Ditemukan'];
             }
         } else {
             # code...
@@ -405,8 +459,7 @@ class ModeratorController extends Controller
     public function caripelatihbaru(Request $key)
     {
         if ($key->has('key')) {
-            $data = User::select(['email', 'name'])->where('email', 'like', '%' . $key->key . '%')->whereNotIn('email', [auth()->user()->email])->get()->toJson();
-            return $data;
+            return User::select(['email', 'name'])->where('name', 'like', '%' . $key->key . '%')->whereIn('status', ['guests', 'moderator', 'treasurer', 'instructor'])->whereNotIn('email', [auth()->user()->email])->get()->toJson();
         } else {
             # code...
         }
@@ -415,7 +468,15 @@ class ModeratorController extends Controller
     public function getdatapelatih(Request $key)
     {
         if ($key->has('kelas')) {
-            return Acc_class::join('users', 'acc_class.kode_pelatih', '=', 'users.code')->select(['users.name', 'users.code', 'acc_class.created_at'])->where('kode_kelas', '=', $key->kelas)->whereIn('users.status', ['moderator', 'treasurer', 'instructor'])->get()->toJson();
+            $data = Acc_class::join('users', 'acc_class.kode_pelatih', '=', 'users.code')->select(['users.name', 'users.code', 'acc_class.created_at'])->where('kode_kelas', '=', $key->kelas)->whereIn('users.status', ['moderator', 'treasurer', 'instructor'])->orderBy('users.name', 'asc')->get();
+            if (json_decode($data) != NULL) {
+                for ($i = 0; $i < count($data); $i++) {
+                    $pelatih[] = ['pelatih' => $data[$i]['name'], 'kode' => $data[$i]['code'], 'tgl_akses' => conv_getDate($data[$i]['created_at'])];
+                }
+                return ['true', $pelatih];
+            } else {
+                return ['false', 'Pelatih Tidak Ditemukan'];
+            }
         } else {
             # code...
         }
@@ -424,7 +485,15 @@ class ModeratorController extends Controller
     public function getdatabendahara(Request $key)
     {
         if ($key->has('kelas')) {
-            return Acc_class::join('users', 'acc_class.kode_pelatih', '=', 'users.code')->select(['users.name', 'users.code', 'acc_class.created_at'])->where('kode_kelas', '=', $key->kelas)->whereIn('users.status', ['moderator', 'treasurer'])->get()->toJson();
+            $data = Acc_class::join('users', 'acc_class.kode_pelatih', '=', 'users.code')->select(['users.name', 'users.code', 'acc_class.created_at'])->where('kode_kelas', '=', $key->kelas)->whereIn('users.status', ['moderator', 'treasurer'])->orderBy('users.name', 'asc')->get();
+            if (json_decode($data) != NULL) {
+                for ($i = 0; $i < count($data); $i++) {
+                    $pelatih[] = ['pelatih' => $data[$i]['name'], 'kode' => $data[$i]['code'], 'tgl_akses' => conv_getDate($data[$i]['created_at'])];
+                }
+                return ['true', $pelatih];
+            } else {
+                return ['false', 'Pelatih Tidak Ditemukan'];
+            }
         } else {
             # code...
         }
@@ -455,18 +524,23 @@ class ModeratorController extends Controller
             if ($checkBulan['thsmt'] . $checkBulan['untuk_bulan'] == getThnSmtClassByCode($data->kode_kelas) . $data->untuk_bulan) {
                 return ['false', 'Pembayaran Pada Bulan ' . getMonth($data->untuk_bulan) . ' Telah Dilakukan Oleh Peserta'];
             } else {
-                $pushRecSpp = Record_Spp::create([
-                    'thsmt' => getThnSmtClassByCode($data->kode_kelas),
-                    'kode_kelas' => $data->kode_kelas,
-                    'kode_peserta' => $data->kode_peserta,
-                    'kredit' => getSppFeeClassByCode($data->kode_kelas),
-                    'untuk_bulan' => $data->untuk_bulan,
-                    'kode_pj' => auth()->user()->code
-                ]);
-                if ($pushRecSpp == TRUE) {
-                    return ['true', 'Berhasil Menambahkan SPP Peserta'];
+                $getFeeSpp = getSppFeeClassByCode($data->kode_kelas);
+                if ($getFeeSpp != NULL) {
+                    $pushRecSpp = Record_Spp::create([
+                        'thsmt' => getThnSmtClassByCode($data->kode_kelas),
+                        'kode_kelas' => $data->kode_kelas,
+                        'kode_peserta' => $data->kode_peserta,
+                        'kredit' => $getFeeSpp,
+                        'untuk_bulan' => $data->untuk_bulan,
+                        'kode_pj' => auth()->user()->code
+                    ]);
+                    if ($pushRecSpp == TRUE) {
+                        return ['true', 'Berhasil Menambahkan SPP Peserta'];
+                    } else {
+                        return ['false', 'Gagal Menambahkan SPP Peserta'];
+                    }
                 } else {
-                    return ['false', 'Gagal Menambahkan SPP Peserta'];
+                    return ['false', 'Biaya SPP Belum Ditentukan!'];
                 }
             }
         }

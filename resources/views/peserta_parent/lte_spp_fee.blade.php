@@ -28,7 +28,11 @@
                             <th class="text-center">Penanggung Jawab</th>
                         </tr>
                     </thead>
-                    <tbody>{!! getRecSppPstByClassAndCodeInTbody(getClassCodeByPstCode(auth()->user()->code), auth()->user()->code) !!}</tbody>
+                    <tbody>@if(getRecSppPstByClassAndCodeInTbody(getClassCodeByPstCode(auth()->user()->code), auth()->user()->code) != NULL)
+                        {!! implode('', getRecSppPstByClassAndCodeInTbody(getClassCodeByPstCode(auth()->user()->code), auth()->user()->code)) !!}
+                        @else {!! '<tr>
+                            <td colspan="5" class="text-center alert-danger" style="font-weight: bold;">Tidak Ada Record SPP</td>
+                        </tr>' !!} @endif</tbody>
                 </table>
             </div>
         </div>
@@ -62,7 +66,13 @@
                                 <th class="text-center">Penanggung Jawab</th>
                             </tr>
                         </thead>
-                        <tbody>{!! getRecSppPstByClassAndCodeInTbody(getClassCodeByPstCode($record->childs_code), $record->childs_code) !!}</tbody>
+                        <tbody>@if(getRecSppPstByClassAndCodeInTbody(getClassCodeByPstCode($record->childs_code), $record->childs_code) != NULL)
+                            {!! implode('', getRecSppPstByClassAndCodeInTbody(getClassCodeByPstCode($record->childs_code), $record->childs_code)) !!}
+                            @else
+                            {!! '<tr>
+                                <td colspan="5" class="text-center alert-danger" style="font-weight: bold;">Tidak Ada Record SPP</td>
+                            </tr>' !!}
+                            @endif</tbody>
                     </table>
                 </div>
             </div>

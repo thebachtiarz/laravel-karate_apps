@@ -82,18 +82,19 @@
                 <div class="row">
                     <div class="col m6 s12">
                         <div class="input-field">
-                            <input placeholder="" id="passwd_a" type="password" class="validate" name="pass_a" data-length="20" minlength="6" maxlength="20" required="">
+                            <input placeholder="" id="passwd_a" type="password" class="validate" data-length="20" minlength="6" maxlength="20" required="">
                             <label for="passwd_a">Password</label>
-                            <input type="hidden" name="hide" id="dafHide" />
                         </div>
                     </div>
                     <div class="col m6 s12">
                         <div class="input-field">
-                            <input placeholder="" id="passwd_b" type="password" class="validate" name="pass_b" data-length="20" minlength="6" maxlength="20" required="">
+                            <input placeholder="" id="passwd_b" type="password" class="validate" data-length="20" minlength="6" maxlength="20" required="">
                             <label for="passwd_b">Password Validasi</label>
                         </div>
                     </div>
                 </div>
+                <input type="hidden" id="back_passwd_a" name="pass_a" minlength="96" maxlength="96" readonly required="">
+                <input type="hidden" id="back_passwd_b" name="pass_b" minlength="96" maxlength="96" readonly required="">
                 <button class="btn waves-effect waves-light" id="startRegister" type="submit" onclick="return encDaf()">Daftar<i class="material-icons right">send</i></button>
             </form>
         </div>
@@ -105,4 +106,15 @@
     @include('layouts.includes._sweetalert')
     @include('layouts.includes._forgejs')
     <script src="{{ asset('js/materialize_register.js') }}"></script>
+    <script>
+        function mediascreen(x) {
+            if (x.matches) {
+                location.replace('daftar?mediasize=mobile');
+            }
+        }
+
+        var x = window.matchMedia("(max-width: 600px)");
+        mediascreen(x);
+        x.addListener(mediascreen);
+    </script>
     <!-- </body></html> -->

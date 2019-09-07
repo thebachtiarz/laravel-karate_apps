@@ -22,13 +22,16 @@
                 <div class="box-body">
                     <select class="form-control" id="selMateri">
                         @php $selID = 1 @endphp
-                        <?php for ($i = 1; $i <= 10; $i++) : ?>
-                        <?php if ($i != '9') : ?>
-                        <option id="mtr{{$selID}}" value="{{ $i }}">Materi Kyu {{ $i }} / Sabuk {{ get_belt_by_kyu($i) }}</option>
-                        @php $selID++ @endphp
-                        <?php endif ?>
+                        <?php for ($i = 2; $i <= 10; $i++) : ?>
+                            <?php if ($i != '9') : ?>
+                                <option id="mtr{{$selID}}" value="{{ $i }}">Materi Kyu {{ $i }} / Sabuk {{ get_belt_by_kyu($i) }}</option>
+                                @php $selID++ @endphp
+                            <?php endif ?>
                         <?php endfor ?>
                     </select>
+                    <div class="alert alert-info text-black zAlertResolution" style="margin-top: 5px; font-weight: bold; font-style: italic;">
+                        Untuk Perangkat Smartphone Harap Download Materi Guna Resolusi Yang Lebih Baik.
+                    </div>
                 </div>
             </div>
         </div>
@@ -55,6 +58,9 @@
                         @php $selID++ @endphp
                         @endforeach
                     </select>
+                    <div class="alert alert-info text-black zAlertResolution" style="margin-top: 5px; font-weight: bold; font-style: italic;">
+                        Untuk Perangkat Smartphone Harap Download Materi Guna Resolusi Yang Lebih Baik.
+                    </div>
                 </div>
             </div>
         </div>
@@ -71,38 +77,5 @@
 @endsection
 
 @section('footer')
-<script>
-    // autoselect peserta when reload
-    $(document).ready(function() {
-        $('#mtr1').attr('selected', true);
-        getMateriPeserta($('#mtr1').val());
-    });
-
-    // select materi peserta
-    $('#selMateri').on('change', function() {
-        let kyuMateri = $("#selMateri option:selected").val();
-        getMateriPeserta(kyuMateri);
-    });
-
-    // function get materi peserta by kyu
-    function getMateriPeserta(tingkat) {
-        let progress = '<div class="progress progress-sm active"><div class="progress-bar progress-bar-success progress-bar-striped" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div></div>';
-        $('#viewMateri').html(progress);
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            }
-        });
-        $.ajax({
-            type: 'POST',
-            url: '/materi/get',
-            data: {
-                kyu: tingkat
-            },
-            success: function(data) {
-                $('#viewMateri').html(data);
-            }
-        });
-    }
-</script>
+<script src="{{ asset('/js/juklak_materi.js') }}"></script>
 @endsection

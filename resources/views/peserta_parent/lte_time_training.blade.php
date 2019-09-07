@@ -56,7 +56,7 @@ if (isset($_GET['thsmt'])) {
                 <form action="" class="form-inline" method="get" accept-charset="ISO-8859-1">
                     <select class="form-control" id="thsmt" name="thsmt">
                         <option value="" disabled selected hidden>Semester</option>
-                        {{ createOptionSemesterForSearch() }}
+                        {{ createOptionSemesterForSearch($forthsmt) }}
                     </select>
                     <button type="submit" id="submitThSmt" hidden>Get Data</button>
                 </form>

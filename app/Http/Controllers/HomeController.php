@@ -12,6 +12,25 @@ class HomeController extends Controller
     public function home()
     {
         if (Auth::user()->code) {
+            // $array = [
+            //     '0' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '3'],
+            //     '1' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '4'],
+            //     '2' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '1'],
+            //     '3' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '10'],
+            //     '4' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '6'],
+            //     '5' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '2'],
+            //     '6' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '9'],
+            //     '7' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '5'],
+            //     '8' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '8'],
+            //     '9' => ['a' => 'aaaaa', 'b' => 'bbbbb', 'c' => 'ccccc', 'd' => 'ddddd', 'e' => 'eeeee', 'f' => '7']
+            // ];
+
+            // foreach ($array as $key) {
+            //     $data[] = $key;
+            // }
+            // rsort($data);
+            // dd($data);
+
             // return view('home.index', ['title' => 'Karate | Home']);
             return View::make('home.lte_home', ['title' => 'Karate | Home']);
         } else {

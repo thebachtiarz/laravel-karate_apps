@@ -69,8 +69,11 @@ class AuthController extends Controller
         }
     }
 
-    public function daftar()
+    public function daftar(Request $key)
     {
+        if ($key->has('mediasize')) {
+            return view('auth.register_mobile', ['title' => 'Register Apps']);
+        }
         return view('auth.register', ['title' => 'Register Apps']);
     }
 
